@@ -1,0 +1,140 @@
+# GitHub Actions Workflow untuk Continuous Integration
+# File ini mendefinisikan pipeline CI yang akan berjalan otomatis
+
+name: CI Pipeline
+
+# Trigger: kapan workflow ini akan berjalan
+on:
+  # Berjalan saat ada push ke branch main atau develop
+  push:
+    branches: [ main, develop ]
+  
+  # Berjalan saat ada pull request ke branch main
+  pull_request:
+    branches: [ main ]
+  
+  # Memungkinkan manual trigger dari GitHub UI
+  workflow_dispatch:
+
+# Jobs yang akan dijalankan
+jobs:
+  # Job 1: Testing dan Code Quality
+  test:
+    name: Test and Code Quality
+    runs-on: ubuntu-latest
+    
+    # Matrix strategy untuk test di multiple Python versions
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, '3.10', '3.11']
+    
+    steps:
+    # Step 1: Checkout code dari repository
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Step 2: Setup Python environment
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    # Step 3: Cache dependencies untuk mempercepat build
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    # Step 4: Install dependencies
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    # Step 5: Code linting dengan flake8
+    - name: Lint with flake8
+      run: |
+        # Stop build jika ada syntax errors atau undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Treat semua warnings sebagai errors dengan exit-zero
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    # Step 6: Code formatting check dengan black
+    - name: Check code formatting with black
+      run: |
+        black --check --diff .
+    
+    # Step 7: Run unit tests dengan coverage
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ --cov=src --cov-report=xml --cov-report=html --verbose
+    
+    # Step 8: Upload coverage reports
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # Job 2: Security Scan
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: test  # Hanya berjalan jika test job berhasil
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install security tools
+      run: |
+        pip install bandit safety
+    
+    - name: Run Bandit security scan
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+        bandit -r src/
+    
+    - name: Check for known security vulnerabilities
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check
+
+  # Job 3: Build and Package
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: [test, security]  # Berjalan setelah test dan security berhasil
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install build tools
+      run: |
+        pip install build wheel
+    
+    - name: Build package
+      run: |
+        python -m build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-package
+        path: dist/
