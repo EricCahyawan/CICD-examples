@@ -7,10 +7,9 @@ import unittest
 import sys
 import os
 
-# Menambahkan src directory ke path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
-from calculator import Calculator
+# Add src to path - Fixed version
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from src.calculator import Calculator
 
 class TestCalculator(unittest.TestCase):
     """Test cases untuk Calculator class"""

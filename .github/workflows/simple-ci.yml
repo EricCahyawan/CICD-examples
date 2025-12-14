@@ -1,0 +1,39 @@
+name: Simple CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test Application
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+    
+    - name: Test import
+      run: |
+        python -c "from src.calculator import Calculator; calc = Calculator(); print(f'Test: 2+3={calc.add(2,3)}')"
+    
+    - name: Run tests
+      run: |
+        python -m pytest tests/ -v
+    
+    - name: Test calculator functions
+      run: |
+        python src/calculator.py
