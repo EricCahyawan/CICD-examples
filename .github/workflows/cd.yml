@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     needs: deploy-staging
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    if: github.event_name == 'release' || github.event.inputs.environment == 'production'
     
     steps:
     - name: Checkout code
