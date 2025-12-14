@@ -3,16 +3,15 @@
 
 name: CD Pipeline
 
-# Trigger: berjalan saat ada release atau tag baru
+# Trigger: berjalan otomatis saat push ke main
 on:
+  # Berjalan saat push ke main branch
+  push:
+    branches: [ main ]
+  
   # Berjalan saat membuat release
   release:
     types: [published]
-  
-  # Berjalan saat push tag yang dimulai dengan 'v'
-  push:
-    tags:
-      - 'v*'
   
   # Manual trigger
   workflow_dispatch:
